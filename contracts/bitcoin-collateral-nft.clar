@@ -183,3 +183,34 @@
         (ok true)
     )
 )
+
+;; Staking Functions
+
+(define-public (stake-nft 
+    (token-id uint)
+)
+    (let 
+        ((metadata (unwrap! (map-get? token-metadata { token-id: token-id }) ERR-TOKEN-NOT-FOUND)))
+        
+        (asserts! (is-owner-or-authorized token-id) ERR-UNAUTHORIZED)
+        (asserts! (not (get is-staked metadata)) ERR-ALREADY-STAKED)
+        
+        (map-set token-metadata 
+            { token-id: token-id }
+            (merge metadata { 
+                is-staked: true,
+                stake-start-height: block-height 
+            })
+        )
+        
+        (map-set staking-rewards 
+            { token-id: token-id }
+            {
+                accumulated-yield: u0,
+                last-claim-height: block-height
+            }
+        )
+        
+        (ok true)
+    )
+)
