@@ -214,3 +214,42 @@
         (ok true)
     )
 )
+
+(define-public (unstake-nft 
+    (token-id uint)
+)
+    (let 
+        ((metadata (unwrap! (map-get? token-metadata { token-id: token-id }) ERR-TOKEN-NOT-FOUND))
+         (rewards (unwrap! (map-get? staking-rewards { token-id: token-id }) ERR-NOT-STAKED)))
+        
+        (asserts! (is-owner-or-authorized token-id) ERR-UNAUTHORIZED)
+        (asserts! (get is-staked metadata) ERR-NOT-STAKED)
+        
+        (try! (claim-staking-rewards token-id))
+        
+        (map-set token-metadata 
+            { token-id: token-id }
+            (merge metadata { 
+                is-staked: false,
+                stake-start-height: u0 
+            })
+        )
+        
+        (ok true)
+    )
+)
+
+;; Reward Functions
+
+(define-private (calculate-rewards 
+    (token-id uint)
+)
+    (let 
+        ((metadata (unwrap! (map-get? token-metadata { token-id: token-id }) (err ERR-TOKEN-NOT-FOUND)))
+         (rewards (unwrap! (map-get? staking-rewards { token-id: token-id }) (err ERR-NOT-STAKED)))
+         (blocks-staked (- block-height (get stake-start-height metadata)))
+         (yield-per-block (/ (var-get yield-rate) u52560))  ;; Blocks per year approximation
+         (new-rewards (* blocks-staked yield-per-block)))
+        (ok (+ (get accumulated-yield rewards) new-rewards))
+    )
+)
