@@ -32,3 +32,44 @@
 (define-constant ERR-TRANSFER-FAILED (err u1007))
 (define-constant ERR-ALREADY-STAKED (err u1008))
 (define-constant ERR-NOT-STAKED (err u1009))
+
+;; NFT Definition
+
+(define-non-fungible-token bitcoin-backed-nft uint)
+
+;; Data Variables
+
+(define-data-var total-supply uint u0)
+(define-data-var protocol-fee uint u25)  ;; 2.5% fee in basis points
+(define-data-var min-collateral-ratio uint u150)  ;; 150% minimum collateral ratio
+(define-data-var yield-rate uint u50)  ;; 5% annual yield rate in basis points
+
+;; Data Maps
+
+(define-map token-metadata 
+    { token-id: uint }
+    { 
+        creator: principal,
+        uri: (string-ascii 256),
+        collateral-amount: uint,
+        is-staked: bool,
+        stake-start-height: uint
+    }
+)
+
+(define-map token-listings 
+    { token-id: uint }
+    { 
+        price: uint, 
+        seller: principal, 
+        is-active: bool 
+    }
+)
+
+(define-map staking-rewards 
+    { token-id: uint }
+    {
+        accumulated-yield: uint,
+        last-claim-height: uint
+    }
+)
