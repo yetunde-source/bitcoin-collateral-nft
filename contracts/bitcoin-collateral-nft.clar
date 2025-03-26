@@ -73,3 +73,47 @@
         last-claim-height: uint
     }
 )
+
+;; Utility Functions
+
+(define-private (is-owner-or-authorized (token-id uint))
+    (let 
+        ((metadata (unwrap! (map-get? token-metadata { token-id: token-id }) false))
+         (owner (nft-get-owner? bitcoin-backed-nft token-id)))
+        (or 
+            (is-eq tx-sender CONTRACT-OWNER)
+            (and owner (is-eq tx-sender (unwrap-panic owner)))
+        )
+    )
+)
+
+;; Core NFT Functions
+
+(define-public (mint-nft 
+    (uri (string-ascii 256)) 
+    (collateral-amount uint)
+)
+    (let 
+        ((new-token-id (+ (var-get total-supply) u1))
+         (min-collateral (/ (* (var-get min-collateral-ratio) collateral-amount) u100)))
+        (asserts! (> (len uri) u0) ERR-INVALID-PARAMETERS)
+        (asserts! (>= (stx-get-balance tx-sender) min-collateral) ERR-INSUFFICIENT-FUNDS)
+        
+        (try! (stx-transfer? min-collateral tx-sender (as-contract tx-sender)))
+        (try! (nft-mint? bitcoin-backed-nft new-token-id tx-sender))
+        
+        (map-set token-metadata 
+            { token-id: new-token-id }
+            { 
+                creator: tx-sender,
+                uri: uri,
+                collateral-amount: collateral-amount,
+                is-staked: false,
+                stake-start-height: u0
+            }
+        )
+        
+        (var-set total-supply new-token-id)
+        (ok new-token-id)
+    )
+)
